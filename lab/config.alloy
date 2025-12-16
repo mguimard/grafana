@@ -1,0 +1,105 @@
+// ------------------------------------------------
+// Enable debugging (see http://192.168.56.10:12345)
+// ------------------------------------------------
+livedebugging {
+  enabled = true
+}
+
+// ------------------------------------------------
+// Docker container logs
+// ------------------------------------------------
+discovery.docker "linux" {
+	host             = "unix:///var/run/docker.sock"
+	refresh_interval = "5s"
+}
+
+discovery.relabel "linux" {
+	targets = []
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.*)"
+		target_label  = "container"
+	}
+}
+
+loki.source.docker "linux" {
+	host             = "unix:///var/run/docker.sock"
+	targets          = discovery.docker.linux.targets
+	forward_to       = [loki.write.default.receiver]
+	relabel_rules    = discovery.relabel.linux.rules
+	refresh_interval = "5s"
+}
+
+loki.write "default" {
+	endpoint {
+		url       = "http://gateway:3100/loki/api/v1/push"
+		tenant_id = "tenant1"
+	}
+	external_labels = {}
+}
+
+// ------------------------------------------------
+// Prometheus redis integration
+// ------------------------------------------------
+prometheus.exporter.redis "redis1" {
+  redis_addr = "192.168.56.10:10010"
+}
+
+prometheus.exporter.redis "redis2" {
+  redis_addr = "192.168.56.10:10012"
+}
+
+prometheus.scrape "redis1" {
+  targets    = prometheus.exporter.redis.redis1.targets
+  forward_to = [prometheus.remote_write.redis1.receiver]
+}
+
+prometheus.scrape "redis2" {
+  targets    = prometheus.exporter.redis.redis2.targets
+  forward_to = [prometheus.remote_write.redis2.receiver]
+}
+
+prometheus.remote_write "redis1" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+	external_labels = {
+		"foo" = "bar",
+		"database" = "redis1",
+	}
+}
+
+prometheus.remote_write "redis2" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+	external_labels = {
+		"foo" = "bar",
+		"database" = "redis2",
+	}
+}
+// ------------------------------------------------
+// Open telemetry integration
+// ------------------------------------------------
+otelcol.receiver.otlp "otlp_receiver" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces = [otelcol.exporter.otlp.tempo.input,]
+  }
+}
+
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "tempo:4317"
+    tls {
+			insecure = true
+		}
+  }
+}
