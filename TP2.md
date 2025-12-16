@@ -14,7 +14,7 @@ Liste des aplications déployées :
 - Portainer (https://192.168.56.10:10001) - nécessite un restart (docker restart portainer)
 - homepage (http://192.168.56.10:10030)
 - mealie (http://192.168.56.10:10040)
-- nginx 1->3 (http://http://192.168.56.10:10020, http://http://192.168.56.10:10021, http://http://192.168.56.10:10022)
+- nginx 1->3 (http://192.168.56.10:10020, http://192.168.56.10:10021, http://192.168.56.10:10022)
 - note-ote-demo (http://192.168.56.10:10050/)
 - redis-stack-1 (http://192.168.56.10:10011)
 - redis-stack-2 (http://192.168.56.10:10013)
